@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Атлас нейросетей, сентябрь 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#EEF3F5; --sea:#DCE7EC; --grid:rgba(40,70,90,.13); --ink:#1C2B36; --ink2:#4E5F6B;
+  --paper:#F9FBFC; --line:#C5D3DA; --route:#2446C4; --dot-stroke:#fff;
+  --c-a:#EAD9A8; --c-o:#C2DBB5; --c-c:#CFC8EC; --c-i:#F4CDB8;
+  --c-v:#EBC0D0; --c-s:#DCE6A6; --c-r:#AEDAD3; --c-x:#D9D2C5;
+  --edge:rgba(28,43,54,.35);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0A141B; --sea:#0E1B24; --grid:rgba(160,200,220,.08); --ink:#E3ECF0; --ink2:#9DB0BA;
+    --paper:#12212B; --line:#2A3E4B; --route:#86A8FF; --dot-stroke:#0E1B24;
+    --c-a:#4A4128; --c-o:#2F4A33; --c-c:#3A3560; --c-i:#5A3A2C;
+    --c-v:#55303F; --c-s:#414A22; --c-r:#1F4A45; --c-x:#45403A;
+    --edge:rgba(227,236,240,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0A141B; --sea:#0E1B24; --grid:rgba(160,200,220,.08); --ink:#E3ECF0; --ink2:#9DB0BA;
+  --paper:#12212B; --line:#2A3E4B; --route:#86A8FF; --dot-stroke:#0E1B24;
+  --c-a:#4A4128; --c-o:#2F4A33; --c-c:#3A3560; --c-i:#5A3A2C;
+  --c-v:#55303F; --c-s:#414A22; --c-r:#1F4A45; --c-x:#45403A;
+  --edge:rgba(227,236,240,.3);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,"Segoe UI",Roboto,Arial,sans-serif;font-size:16px;line-height:1.5}
+.wrap{max-width:1500px;margin:0 auto;padding:28px 20px 60px}
+header{display:flex;flex-wrap:wrap;gap:18px 40px;align-items:flex-end;justify-content:space-between;margin-bottom:22px}
+h1{font-family:Unbounded,"Arial Black",sans-serif;font-weight:700;font-size:clamp(28px,4.4vw,52px);line-height:1.05;margin:0;letter-spacing:-.01em}
+.sub{color:var(--ink2);max-width:60ch;margin:10px 0 0}
+.search{display:flex;flex-direction:column;gap:6px;min-width:260px;flex:0 1 360px}
+.search label{font-size:14px;color:var(--ink2)}
+.search input{font:inherit;padding:11px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink)}
+.search input:focus{outline:2px solid var(--route);outline-offset:1px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start}
+@media (max-width:1050px){.layout{grid-template-columns:1fr}}
+.mapbox{background:var(--sea);border-radius:18px;overflow-x:auto;border:1px solid var(--line)}
+.mapbox svg{display:block;width:100%;min-width:980px;height:auto}
+.hint{font-size:14px;color:var(--ink2);margin:10px 4px 0}
+.node{cursor:pointer}
+.node text{font-family:Manrope,sans-serif;font-size:14px;font-weight:600;fill:var(--ink)}
+.node circle.dot{fill:var(--ink);stroke:var(--dot-stroke);stroke-width:2}
+.node:hover text,.node:focus text{text-decoration:underline}
+.node:focus{outline:none}
+.node:focus-visible circle.ring{stroke:var(--route);stroke-width:2.5;fill:none}
+.node.dim{opacity:.16}
+.node.sel circle.dot{fill:var(--route)}
+.node.sel text{fill:var(--route)}
+.node.kin circle.dot{fill:var(--route)}
+.region-title{font-family:Unbounded,sans-serif;font-weight:500;font-size:17px;fill:var(--ink)}
+.region-count{font-size:13px;fill:var(--ink2)}
+.route{fill:none;stroke:var(--route);stroke-width:1.8;stroke-dasharray:5 5;opacity:.85}
+aside{position:sticky;top:calc(16px + env(safe-area-inset-top,0px));background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:22px;max-height:calc(100vh - 32px);overflow:auto}
+@media (max-width:1050px){aside{position:static;max-height:none}}
+aside h2{font-family:Unbounded,sans-serif;font-weight:700;font-size:26px;line-height:1.15;margin:0 0 6px}
+.maker{display:inline-flex;align-items:center;gap:8px;font-weight:700;color:var(--ink2);margin-bottom:4px}
+.swatch{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid var(--edge);flex:none}
+.models{font-size:14px;color:var(--ink2);margin:0 0 16px}
+aside h3{font-size:15px;margin:18px 0 6px;font-weight:700}
+aside p{margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:13px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--bg)}
+.con{border-left:3px solid #C0392B;padding-left:12px}
+.kin-list button{font:inherit;font-size:14px;background:none;border:1px solid var(--route);color:var(--route);border-radius:999px;padding:4px 10px;cursor:pointer;margin:0 6px 6px 0}
+.kin-list button:focus-visible{outline:2px solid var(--route);outline-offset:2px}
+.empty{color:var(--ink2)}
+.index{margin-top:44px}
+.index h2{font-family:Unbounded,sans-serif;font-weight:700;font-size:28px;margin:0 0 6px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 22px}
+.filters button{font:inherit;font-size:14px;display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+.filters button[aria-pressed="true"]{border-color:var(--ink);font-weight:700}
+.filters button:focus-visible{outline:2px solid var(--route);outline-offset:2px}
+.gaz{columns:3 300px;column-gap:36px}
+.gaz section{break-inside:avoid;margin-bottom:26px}
+.gaz h3{font-size:16px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.gaz ul{list-style:none;margin:0;padding:0}
+.gaz li button{all:unset;cursor:pointer;display:flex;justify-content:space-between;gap:12px;width:100%;padding:5px 0;border-bottom:1px dotted var(--line)}
+.gaz li button:hover .nm,.gaz li button:focus-visible .nm{text-decoration:underline}
+.gaz li button:focus-visible{outline:2px solid var(--route)}
+.gaz .mk{color:var(--ink2);font-size:14px;text-align:right}
+.note{margin-top:30px;font-size:14px;color:var(--ink2);max-width:80ch}
+@media (prefers-reduced-motion:no-preference){.route{animation:dash 1.2s linear infinite}@keyframes dash{to{stroke-dashoffset:-20}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Атлас нейросетей</h1>
+      <p class="sub">Главные ИИ-модели и сервисы на сентябрь 2026 года: кто их делает, что они умеют, с чем работают и где слабы. Нажмите на точку на карте, чтобы открыть карточку.</p>
+    </div>
+    <div class="search">
+      <label for="q">Найти нейросеть, компанию или сервис</label>
+      <input id="q" type="search" placeholder="Например: Google, видео, Telegram" autocomplete="off">
+    </div>
+  </header>
+
+  <div class="layout">
+    <div>
+      <div class="mapbox"><svg id="map" viewBox="0 0 1560 980" role="img" aria-label="Карта нейросетей по категориям"></svg></div>
+      <p class="hint">Пунктирные маршруты соединяют продукты одного производителя. На телефоне карту можно прокручивать вбок.</p>
+    </div>
+    <aside id="panel" aria-live="polite">
+      <p class="empty">Выберите нейросеть на карте или в указателе ниже.</p>
+    </aside>
+  </div>
+
+  <section class="index">
+    <h2>Указатель</h2>
+    <div class="filters" id="filters"></div>
+    <div class="gaz" id="gaz"></div>
+    <p class="note">Карта охватывает самые заметные нейросети, а не абсолютно все: новые модели выходят почти каждую неделю. Версии указаны по открытым источникам на конец сентября 2026 года. Доступность сервисов из России меняется, перед оплатой стоит проверить её отдельно.</p>
+  </section>
+</div>
+
+<script>
+const CATS = [
+  {id:'a', name:'Универсальные ассистенты'},
+  {id:'c', name:'Код и агенты'},
+  {id:'i', name:'Изображения'},
+  {id:'v', name:'Видео'},
+  {id:'o', name:'Открытые модели'},
+  {id:'s', name:'Голос и музыка'},
+  {id:'r', name:'Поиск и работа'},
+  {id:'x', name:'Наука и роботы'}
+];
+
+const D = [
+// ---------- Ассистенты
+{id:'chatgpt',s:'ChatGPT',n:'ChatGPT',c:'OpenAI',cat:'a',m:'GPT-6 Astra, GPT-5.6 (Sol, Luna, Terra)',
+ can:'Самый массовый ИИ-ассистент: отвечает на вопросы, пишет и редактирует тексты, решает задачи с рассуждением, ищет в интернете, рисует картинки, говорит голосом, делает глубокие исследования (Deep Research) и может сам выполнять действия в браузере. Помнит предпочтения между чатами.',
+ int:['Gmail','Google Drive','Outlook','SharePoint','Slack','GitHub','Microsoft Word','Apple Siri','плагины и MCP','браузер Atlas'],
+ con:'Официально недоступен в России. Самые сильные модели только в платных тарифах. Может уверенно ошибаться в фактах.'},
+{id:'claude',s:'Claude',n:'Claude',c:'Anthropic',cat:'a',m:'Claude Opus 5.5, Sonnet 5, Haiku 4.5, Fable 5.1',
+ can:'Сильный в длинных документах, аккуратных текстах, анализе и программировании. Создаёт файлы Word, Excel и PowerPoint, веб-страницы и мини-приложения, работает агентом в браузере и на компьютере.',
+ int:['Google Drive','Gmail','Google Calendar','Slack','Notion','GitHub','Excel','PowerPoint','Chrome','MCP-коннекторы'],
+ con:'Не генерирует изображения и видео. Официально недоступен в России. Лимиты сообщений на тарифах.'},
+{id:'gemini',s:'Gemini',n:'Google Gemini',c:'Google',cat:'a',m:'Gemini 3.1 Pro, 3.8 Flash, 3 Deep Think',
+ can:'Понимает фото, видео и звук, держит огромный контекст (целые книги и кодовые базы), рисует картинки, делает видео, проводит глубокие исследования, ведёт блокноты с источниками.',
+ int:['Gmail','Google Docs','Google Sheets','Google Drive','YouTube','Google Maps','Android','Chrome','Wear OS'],
+ con:'Официально недоступен в России. Полная сила раскрывается только внутри экосистемы Google. Вопросы к приватности данных.'},
+{id:'grok',s:'Grok',n:'Grok',c:'xAI',cat:'a',m:'Grok 4.7',
+ can:'Чат-бот с доступом к свежим постам соцсети X в реальном времени, голосовым режимом и генерацией картинок и видео (Grok Imagine). Менее строгие фильтры, чем у конкурентов.',
+ int:['X (Twitter)','автомобили Tesla','API'],
+ con:'Регулярные скандалы из-за модерации и спорных ответов. Мало интеграций с рабочими сервисами. Сильно завязан на X.'},
+{id:'metaai',s:'Meta AI',n:'Meta AI',c:'Meta',cat:'a',m:'Muse Spark 1.3',
+ can:'Ассистент, встроенный прямо в мессенджеры и соцсети: отвечает в чатах, генерирует картинки, работает в умных очках.',
+ int:['WhatsApp','Instagram','Facebook','Messenger','очки Ray-Ban Meta'],
+ con:'Продукты Meta заблокированы в России. Претензии к использованию личных данных для обучения.'},
+{id:'copilot',s:'MS Copilot',n:'Microsoft Copilot',c:'Microsoft',cat:'a',m:'модели OpenAI и собственные модели Microsoft',
+ can:'Бесплатный ассистент в Windows и браузере Edge: чат, поиск Bing, картинки, голос, помощь с файлами на компьютере.',
+ int:['Windows','Edge','Bing','Outlook','OneDrive','Xbox'],
+ con:'Путаница между множеством версий Copilot. Возможности в Office только с платной подпиской. Официально недоступен в России.'},
+{id:'lechat',s:'Le Chat',n:'Le Chat',c:'Mistral AI',cat:'a',m:'Mistral Large, Medium',
+ can:'Европейский ассистент: очень быстрые ответы, поиск, работа с документами, агенты, генерация картинок. Хранит данные по европейским правилам.',
+ int:['MCP-коннекторы','API','Azure','AWS','Google Cloud'],
+ con:'Уступает лидерам в самых сложных задачах. Меньше интеграций и сторонних сервисов.'},
+{id:'deepseek',s:'DeepSeek',n:'DeepSeek',c:'DeepSeek',cat:'a',m:'DeepSeek V4, V4-Pro',
+ can:'Бесплатный чат без лимитов, сильный в логике, математике и коде. Контекст около миллиона токенов. Модели выложены в открытый доступ.',
+ int:['API, совместимый с OpenAI','открытые веса','Hugging Face'],
+ con:'Серверы в Китае, конфиденциальные документы лучше не загружать. Цензура политических тем. Нет генерации картинок и голоса.'},
+{id:'qwen',s:'Qwen Chat',n:'Qwen Chat',c:'Alibaba',cat:'a',m:'Qwen3.8 Max, Plus',
+ can:'Чат, картинки, видео, работа с документами. Модели умеют управлять приложениями на компьютере и телефоне.',
+ int:['Alibaba Cloud','DingTalk','API'],
+ con:'Цензура по чувствительным темам. Экосистема ориентирована на Китай.'},
+{id:'kimi',s:'Kimi',n:'Kimi',c:'Moonshot AI',cat:'a',m:'Kimi K3',
+ can:'Длинный контекст, агентный режим, программирование. Одна из самых мощных открытых моделей.',
+ int:['API','открытые веса','Hugging Face'],
+ con:'Мало известна за пределами Китая. Цензура. Интерфейс и поддержка в основном на китайском и английском.'},
+{id:'gigachat',s:'GigaChat',n:'GigaChat',c:'Сбер',cat:'a',m:'GigaChat',
+ can:'Российский ассистент для русского языка: тексты, ответы, картинки через Kandinsky, расшифровка аудио. Работает без VPN.',
+ int:['Сбер ID','Telegram','ВКонтакте','Max','умные устройства Салют','API'],
+ con:'Уступает мировым лидерам в сложной логике и коде. Осторожные фильтры на многие темы.'},
+{id:'alice',s:'Алиса AI',n:'Алиса AI',c:'Яндекс',cat:'a',m:'YandexGPT 5.1 Pro, Alice AI',
+ can:'Голосовой и текстовый ассистент: отвечает с опорой на Поиск, пересказывает статьи и видео, пишет тексты. Бесплатно и без VPN.',
+ int:['Яндекс Браузер','Яндекс Поиск','Яндекс Почта','Яндекс Станция','Яндекс Карты','Yandex Cloud'],
+ con:'Слабее в программировании и сложных многошаговых задачах. Сильно привязан к экосистеме Яндекса.'},
+{id:'apple',s:'Apple Intelligence',n:'Apple Intelligence',c:'Apple',cat:'a',m:'модели Apple на устройстве и в облаке',
+ can:'Переписывает и сокращает тексты, делает сводки уведомлений, генерирует эмодзи и картинки, улучшает Siri. Часть задач выполняет прямо на устройстве.',
+ int:['iPhone','iPad','Mac','Siri','ChatGPT'],
+ con:'Заметно отстаёт от лидеров по возможностям. Работает только на новых устройствах и не на всех языках.'},
+{id:'alexa',s:'Alexa+',n:'Alexa+',c:'Amazon',cat:'a',m:'модели Amazon Nova и партнёров',
+ can:'Голосовой помощник нового поколения: ведёт диалог, управляет умным домом, заказывает товары и услуги.',
+ int:['колонки Echo','камеры Ring','Fire TV','Amazon','умный дом'],
+ con:'Ориентирована в первую очередь на США, русского языка нет.'},
+
+// ---------- Код и агенты
+{id:'ghcopilot',s:'GitHub Copilot',n:'GitHub Copilot',c:'Microsoft',cat:'c',m:'модели OpenAI, Anthropic, Google на выбор',
+ can:'Подсказывает код прямо в редакторе, отвечает на вопросы по проекту, а в режиме агента сам вносит правки и создаёт pull request.',
+ int:['VS Code','Visual Studio','JetBrains','Neovim','GitHub'],
+ con:'Платная подписка. Предложенный код может содержать ошибки и уязвимости, его нужно проверять.'},
+{id:'claudecode',s:'Claude Code',n:'Claude Code',c:'Anthropic',cat:'c',m:'модели Claude',
+ can:'Агент-программист: сам читает проект, пишет и исправляет код, запускает тесты и команды.',
+ int:['терминал','VS Code','JetBrains','GitHub','Slack','мобильное приложение'],
+ con:'Нужна подписка или оплата API. На больших задачах быстро расходует лимиты.'},
+{id:'codex',s:'Codex',n:'OpenAI Codex',c:'OpenAI',cat:'c',m:'GPT-5.6 Sol, GPT-6 Astra',
+ can:'Агент для программирования: выполняет задачи в облачной песочнице или локально, пишет код и проверяет его.',
+ int:['ChatGPT','терминал (CLI)','VS Code','GitHub'],
+ con:'Лучшие модели только в платных тарифах. Требует контроля результатов.'},
+{id:'cursor',s:'Cursor',n:'Cursor',c:'Anysphere',cat:'c',m:'модели разных компаний',
+ can:'Редактор кода со встроенным ИИ: автодополнение, чат по всему проекту, агенты для больших правок.',
+ int:['основан на VS Code','GitHub','модели OpenAI, Anthropic, Google'],
+ con:'Подписка и лимиты на быстрые запросы. Без проверки агент может сломать большой проект.'},
+{id:'antigravity',s:'Antigravity',n:'Google Antigravity',c:'Google',cat:'c',m:'Gemini',
+ can:'Среда разработки, где несколько агентов на Gemini параллельно пишут код, тестируют его в браузере и отчитываются.',
+ int:['Gemini','Chrome','Google Cloud'],
+ con:'Продукт молодой, инструменты и API часто меняются.'},
+{id:'devin',s:'Devin, Windsurf',n:'Devin и Windsurf',c:'Cognition',cat:'c',m:'собственные и сторонние модели',
+ can:'Devin берёт задачу целиком, как младший разработчик. Windsurf это редактор кода с ИИ-агентом.',
+ int:['GitHub','Slack','Jira','Linear'],
+ con:'Дорого. На сложных задачах работа агента требует много проверок.'},
+{id:'replit',s:'Replit Agent',n:'Replit Agent',c:'Replit',cat:'c',m:'модели разных компаний',
+ can:'Создаёт веб-приложения по описанию прямо в браузере и сразу публикует их в интернете.',
+ int:['хостинг Replit','базы данных','GitHub'],
+ con:'Ресурсы и хостинг платные. Для сложных проектов качество ниже.'},
+{id:'lovable',s:'Lovable',n:'Lovable',c:'Lovable',cat:'c',m:'модели разных компаний',
+ can:'Собирает сайты и веб-приложения по текстовому описанию без программирования.',
+ int:['Supabase','GitHub','Stripe'],
+ con:'Ограничен веб-приложениями. Сложную логику трудно довести до конца.'},
+{id:'gigacode',s:'GigaCode',n:'GigaCode',c:'Сбер',cat:'c',m:'модели GigaChat',
+ can:'Российский ИИ-помощник программиста: подсказки кода и чат в редакторе, работает без VPN.',
+ int:['JetBrains','VS Code'],
+ con:'Уступает западным аналогам по качеству на сложных задачах.'},
+
+// ---------- Изображения
+{id:'midjourney',s:'Midjourney',n:'Midjourney',c:'Midjourney',cat:'i',m:'Midjourney V7 и новее',
+ can:'Эталон художественных, атмосферных картинок. Умеет оживлять изображения в короткие видео.',
+ int:['сайт Midjourney','Discord'],
+ con:'Только платно. Хуже других справляется с текстом на картинке и точным следованием инструкции.'},
+{id:'gptimage',s:'GPT Image',n:'GPT Image (ChatGPT Images)',c:'OpenAI',cat:'i',m:'GPT Image 2.5',
+ can:'Рисует и редактирует картинки прямо в чате, хорошо пишет текст на изображениях, превращает наброски в готовые картинки.',
+ int:['ChatGPT','API','Microsoft Copilot'],
+ con:'Строгие ограничения на содержание. Официально недоступен в России.'},
+{id:'nanobanana',s:'Nano Banana',n:'Nano Banana (Gemini Image)',c:'Google',cat:'i',m:'Gemini Image, Imagen',
+ can:'Точечно редактирует фото по просьбе, сохраняет одного и того же персонажа на разных картинках.',
+ int:['Gemini','Google Photos','Google Slides','Adobe Firefly','API'],
+ con:'Невидимая водяная метка на картинках. Официально недоступен в России.'},
+{id:'flux',s:'FLUX',n:'FLUX',c:'Black Forest Labs',cat:'i',m:'FLUX',
+ can:'Фотореалистичные картинки, часть моделей открыта и запускается на своём компьютере.',
+ int:['Le Chat','ComfyUI','Hugging Face','API'],
+ con:'Для локального запуска нужна мощная видеокарта.'},
+{id:'sd',s:'Stable Diffusion',n:'Stable Diffusion',c:'Stability AI',cat:'i',m:'Stable Diffusion 3.5',
+ can:'Открытая модель, которую можно бесплатно запускать дома и дообучать под свой стиль.',
+ int:['ComfyUI','Automatic1111','плагины Photoshop','Hugging Face'],
+ con:'Нужно разбираться в настройках. Качество уступает новым закрытым моделям.'},
+{id:'firefly',s:'Adobe Firefly',n:'Adobe Firefly',c:'Adobe',cat:'i',m:'Firefly и модели партнёров',
+ can:'Генерация и дорисовка картинок прямо в программах Adobe, обучена на лицензионных изображениях.',
+ int:['Photoshop','Illustrator','Premiere Pro','Adobe Express'],
+ con:'Нужна подписка Adobe. Adobe ушла из России.'},
+{id:'ideogram',s:'Ideogram',n:'Ideogram',c:'Ideogram',cat:'i',m:'Ideogram 3',
+ can:'Лучше многих пишет текст на картинках: логотипы, постеры, открытки.',
+ int:['сайт','API'],
+ con:'Фотореализм слабее, чем у лидеров.'},
+{id:'kandinsky',s:'Kandinsky',n:'Kandinsky',c:'Сбер',cat:'i',m:'Kandinsky',
+ can:'Российская модель для картинок и коротких видео, работает без VPN.',
+ int:['GigaChat','Telegram','API'],
+ con:'Качество ниже мировых лидеров.'},
+{id:'shedevrum',s:'Шедеврум',n:'Шедеврум',c:'Яндекс',cat:'i',m:'YandexART',
+ can:'Приложение-соцсеть для генерации картинок и коротких анимаций.',
+ int:['приложение Шедеврум','Алиса'],
+ con:'Скромные возможности редактирования, качество ниже лидеров.'},
+{id:'recraft',s:'Recraft',n:'Recraft',c:'Recraft',cat:'i',m:'Recraft V3',
+ can:'Создаёт векторную графику, иконки и иллюстрации в едином фирменном стиле.',
+ int:['сайт','Figma','API'],
+ con:'Узкая специализация на дизайне.'},
+
+// ---------- Видео
+{id:'veo',s:'Veo, Omni',n:'Veo и Gemini Omni',c:'Google',cat:'v',m:'Veo 3, Gemini Omni 1.1 Flash',
+ can:'Видео по тексту и картинке сразу со звуком. Omni продлевает ролики, делает переходы между двумя кадрами, выдаёт до 4K.',
+ int:['Gemini','Flow','YouTube Shorts','Vertex AI'],
+ con:'Дорого, ролики короткие. Официально недоступно в России.'},
+{id:'sora',s:'Sora',n:'Sora',c:'OpenAI',cat:'v',m:'Sora 2',
+ can:'Реалистичные видео со звуком и диалогами по описанию, отдельное приложение с лентой роликов.',
+ int:['приложение Sora','ChatGPT','API'],
+ con:'Доступ ограничен по странам. Строгие правила про реальных людей.'},
+{id:'kling',s:'Kling',n:'Kling',c:'Kuaishou',cat:'v',m:'Kling',
+ can:'Реалистичные движения людей и животных, длинные ролики, оживление фото.',
+ int:['сайт','приложение','API'],
+ con:'Длинные очереди на бесплатном тарифе.'},
+{id:'runway',s:'Runway',n:'Runway',c:'Runway',cat:'v',m:'Gen-4 и новее',
+ can:'Набор инструментов для видеомонтажа с ИИ: генерация, замена объектов, продление сцен. Используется в кино и рекламе.',
+ int:['веб','iOS','API'],
+ con:'Дорогие кредиты, быстро заканчиваются.'},
+{id:'luma',s:'Luma',n:'Luma Dream Machine',c:'Luma AI',cat:'v',m:'Ray',
+ can:'Быстрые кинематографичные ролики по тексту и картинке.',
+ int:['веб','iOS','API'],
+ con:'Сложные сцены с несколькими персонажами получаются хуже.'},
+{id:'hailuo',s:'Hailuo',n:'Hailuo',c:'MiniMax',cat:'v',m:'Hailuo',
+ can:'Динамичные видео с хорошей физикой движения, недорого.',
+ int:['веб','API'],
+ con:'Ролики короткие, есть цензура.'},
+{id:'wan',s:'Wan',n:'Wan',c:'Alibaba',cat:'v',m:'Wan 2.6',
+ can:'Открытая видеомодель: можно запускать самому и встраивать в свои сервисы.',
+ int:['Qwen Chat','ComfyUI','Hugging Face'],
+ con:'Требует мощного оборудования для локального запуска.'},
+{id:'grokimagine',s:'Grok Imagine',n:'Grok Imagine',c:'xAI',cat:'v',m:'Grok Imagine',
+ can:'Быстро делает картинки и короткие видео со звуком внутри Grok.',
+ int:['Grok','X (Twitter)'],
+ con:'Критика за слабые ограничения на спорный контент.'},
+{id:'pika',s:'Pika',n:'Pika',c:'Pika Labs',cat:'v',m:'Pika',
+ can:'Забавные видеоэффекты и короткие ролики для соцсетей.',
+ int:['веб','iOS'],
+ con:'Не подходит для серьёзного видеопроизводства.'},
+
+// ---------- Открытые модели
+{id:'llama',s:'Llama 4',n:'Llama 4',c:'Meta',cat:'o',m:'Llama 4 Scout, Maverick',
+ can:'Открытые модели для запуска на своих серверах. У Scout огромный контекст для длинных документов.',
+ int:['Hugging Face','Ollama','vLLM','AWS','Azure'],
+ con:'Лицензия с ограничениями. Meta сместила фокус на закрытые модели Muse.'},
+{id:'gemma',s:'Gemma',n:'Gemma',c:'Google',cat:'o',m:'Gemma',
+ can:'Маленькие открытые модели, которые работают на ноутбуке и даже телефоне.',
+ int:['Ollama','Hugging Face','Android'],
+ con:'Заметно слабее больших моделей.'},
+{id:'gptoss',s:'gpt-oss',n:'gpt-oss',c:'OpenAI',cat:'o',m:'gpt-oss',
+ can:'Открытые модели с рассуждением под свободной лицензией Apache 2.0.',
+ int:['Hugging Face','Ollama','LM Studio'],
+ con:'Только текст. Отстают от закрытых моделей OpenAI.'},
+{id:'qwenopen',s:'Qwen (открытые)',n:'Qwen, открытые модели',c:'Alibaba',cat:'o',m:'Qwen3.8 27B и другие',
+ can:'Одно из самых популярных семейств открытых моделей: от крошечных до очень больших, хорошо знают много языков.',
+ int:['Hugging Face','Ollama','vLLM'],
+ con:'Самые большие версии требуют отдельного соглашения для крупного бизнеса.'},
+{id:'mistralopen',s:'Mistral (откр.)',n:'Mistral, открытые модели',c:'Mistral AI',cat:'o',m:'Mistral Small, Devstral',
+ can:'Компактные и быстрые открытые модели, в том числе специально для кода.',
+ int:['Hugging Face','Ollama','Le Chat'],
+ con:'Самые сильные модели Mistral закрыты.'},
+{id:'nemotron',s:'Nemotron',n:'Nemotron',c:'NVIDIA',cat:'o',m:'Nemotron 3',
+ can:'Открытые модели для агентов и бизнеса, оптимизированы под видеокарты NVIDIA.',
+ int:['NVIDIA NIM','Hugging Face'],
+ con:'Ориентированы на разработчиков, а не на обычных пользователей.'},
+{id:'glm',s:'GLM',n:'GLM',c:'Zhipu AI (Z.ai)',cat:'o',m:'GLM',
+ can:'Сильные открытые модели для кода и агентов.',
+ int:['Hugging Face','API'],
+ con:'Цензура, мало документации на русском.'},
+{id:'phi',s:'Phi',n:'Phi',c:'Microsoft',cat:'o',m:'Phi',
+ can:'Небольшие открытые модели, которые умно рассуждают при малом размере.',
+ int:['Azure','Hugging Face','Ollama'],
+ con:'Мало знаний о мире из-за компактности.'},
+
+// ---------- Голос и музыка
+{id:'eleven',s:'ElevenLabs',n:'ElevenLabs',c:'ElevenLabs',cat:'s',m:'Eleven v3',
+ can:'Реалистичная озвучка, клонирование голоса, дубляж видео на десятки языков, голосовые агенты для звонков.',
+ int:['API','телефония','сервисы видеомонтажа'],
+ con:'Риск дипфейков. Дорого при больших объёмах.'},
+{id:'suno',s:'Suno',n:'Suno',c:'Suno',cat:'s',m:'Suno',
+ can:'Пишет песни с вокалом и музыкой по короткому описанию, в том числе на русском.',
+ int:['веб','приложение','Microsoft Copilot'],
+ con:'Споры с лейблами об авторских правах.'},
+{id:'udio',s:'Udio',n:'Udio',c:'Udio',cat:'s',m:'Udio',
+ can:'Генерация музыки с хорошим качеством звучания.',
+ int:['веб'],
+ con:'После соглашений с лейблами изменились условия использования и скачивания треков.'},
+{id:'whisper',s:'Whisper, GPT-Live',n:'Whisper и GPT-Live',c:'OpenAI',cat:'s',m:'Whisper, GPT-Live',
+ can:'Whisper распознаёт речь почти на любом языке и открыт для всех. GPT-Live отвечает за живой голосовой режим ChatGPT.',
+ int:['ChatGPT','API','множество приложений для расшифровки'],
+ con:'Whisper иногда выдумывает текст в паузах и тишине.'},
+{id:'salute',s:'SaluteSpeech',n:'SaluteSpeech',c:'Сбер',cat:'s',m:'SaluteSpeech',
+ can:'Распознавание и синтез русской речи для бизнеса и голосовых ботов.',
+ int:['API','устройства Салют','GigaChat'],
+ con:'Ориентирован прежде всего на русский язык.'},
+{id:'speechkit',s:'SpeechKit',n:'Yandex SpeechKit',c:'Яндекс',cat:'s',m:'SpeechKit',
+ can:'Распознавание и синтез речи, расшифровка звонков для колл-центров.',
+ int:['Yandex Cloud','API','Алиса'],
+ con:'Платно по объёму, работает через облако Яндекса.'},
+
+// ---------- Поиск и работа
+{id:'perplexity',s:'Perplexity',n:'Perplexity',c:'Perplexity AI',cat:'r',m:'собственные и сторонние модели',
+ can:'Поисковик с ответами и ссылками на источники. Есть свой браузер-агент Comet.',
+ int:['браузер Comet','API','модели OpenAI, Anthropic, Google'],
+ con:'Иногда неточно пересказывает источники. Конфликты с издателями.'},
+{id:'notebooklm',s:'NotebookLM',n:'NotebookLM',c:'Google',cat:'r',m:'Gemini',
+ can:'Разбирает ваши документы, отвечает только по ним, делает аудио- и видеопересказы в формате подкаста.',
+ int:['Google Drive','Google Docs','YouTube','PDF'],
+ con:'Работает только с загруженными источниками. Официально недоступен в России.'},
+{id:'m365',s:'M365 Copilot',n:'Microsoft 365 Copilot',c:'Microsoft',cat:'r',m:'модели OpenAI и Anthropic',
+ can:'ИИ внутри офисных программ: пишет письма, сводит таблицы, делает презентации, пересказывает встречи.',
+ int:['Word','Excel','PowerPoint','Outlook','Teams'],
+ con:'Дорогая корпоративная подписка. Официально недоступен в России.'},
+{id:'atlas',s:'ChatGPT Atlas',n:'ChatGPT Atlas',c:'OpenAI',cat:'r',m:'модели GPT',
+ can:'Браузер со встроенным ChatGPT, который может сам открывать сайты, заполнять формы и делать покупки.',
+ int:['ChatGPT','сайты в интернете'],
+ con:'Риски безопасности: агента можно обмануть скрытыми инструкциями на сайтах.'},
+{id:'notion',s:'Notion AI',n:'Notion AI',c:'Notion',cat:'r',m:'модели OpenAI и Anthropic',
+ can:'Пишет, суммирует и ищет по базе знаний команды, ведёт заметки встреч.',
+ int:['Notion','Slack','Google Drive','GitHub'],
+ con:'Работает только внутри Notion. Платно.'},
+{id:'manus',s:'Manus',n:'Manus',c:'Manus',cat:'r',m:'модели разных компаний',
+ can:'Универсальный агент: сам исследует тему, собирает таблицы, сайты и отчёты.',
+ int:['веб','браузер','облачные файлы'],
+ con:'Дорогие кредиты, иногда долго выполняет задачи.'},
+
+// ---------- Наука и роботы
+{id:'alphafold',s:'AlphaFold',n:'AlphaFold',c:'Google',cat:'x',m:'AlphaFold 3',
+ can:'Предсказывает строение белков и их взаимодействие с лекарствами. Удостоен Нобелевской премии по химии 2024 года.',
+ int:['AlphaFold Server','база структур EMBL-EBI'],
+ con:'Нужен для узких научных задач, обычному пользователю не пригодится.'},
+{id:'rosalind',s:'GPT-Rosalind',n:'GPT-Rosalind',c:'OpenAI',cat:'x',m:'GPT-Rosalind',
+ can:'Модель для биологии и медицинской химии: анализ генома, планирование экспериментов.',
+ int:['доступ для проверенных исследователей'],
+ con:'Закрытый доступ только для одобренных организаций.'},
+{id:'robotics',s:'Gemini Robotics',n:'Gemini Robotics',c:'Google',cat:'x',m:'Gemini Robotics ER 2',
+ can:'Мозг для роботов: понимает видео в реальном времени, планирует действия, координирует несколько роботов.',
+ int:['Gemini API','Google AI Studio','роботы Boston Dynamics, Agility'],
+ con:'Для разработчиков робототехники, требует оборудования.'},
+{id:'cosmos',s:'Cosmos',n:'NVIDIA Cosmos',c:'NVIDIA',cat:'x',m:'Cosmos',
+ can:'Модели мира: моделируют физику и сцены для обучения роботов и беспилотников.',
+ int:['NVIDIA Omniverse','Isaac','Hugging Face'],
+ con:'Нужны мощные GPU NVIDIA и инженерная команда.'},
+{id:'fsd',s:'Tesla FSD',n:'Tesla FSD',c:'Tesla',cat:'x',m:'FSD',
+ can:'Нейросеть автопилота: ведёт машину по камерам, без лидаров.',
+ int:['автомобили Tesla','робот Optimus'],
+ con:'Всё ещё требует внимания водителя, регуляторы расследуют аварии.'}
+];
+
+const catById = Object.fromEntries(CATS.map(c=>[c.id,c]));
+const byId = Object.fromEntries(D.map(d=>[d.id,d]));
+const NS='http://www.w3.org/2000/svg';
+const svg=document.getElementById('map');
+const W=1560,H=980;
+function el(t,a={},p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+
+// sea graticule
+el('rect',{x:0,y:0,width:W,height:H,fill:'var(--sea)'},svg);
+const g0=el('g',{stroke:'var(--grid)','stroke-width':1,fill:'none'},svg);
+for(let x=0;x<=W;x+=65) el('path',{d:`M${x} 0 Q ${x+(x-W/2)*.06} ${H/2} ${x} ${H}`},g0);
+for(let y=0;y<=H;y+=65) el('path',{d:`M0 ${y} Q ${W/2} ${y+(y-H/2)*.05} ${W} ${y}`},g0);
+
+// seeded noise
+function rnd(seed){let s=seed;return()=>{s=(s*9301+49297)%233280;return s/233280}}
+function blob(cx,cy,rx,ry,seed){
+  const r=rnd(seed),N=22,pts=[];
+  for(let i=0;i<N;i++){
+    const t=i/N*Math.PI*2,c=Math.cos(t),s=Math.sin(t);
+    const k=0.9+r()*0.16;
+    pts.push([cx+Math.sign(c)*Math.pow(Math.abs(c),.55)*rx*k, cy+Math.sign(s)*Math.pow(Math.abs(s),.55)*ry*k]);
+  }
+  let d=`M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for(let i=0;i<N;i++){
+    const p0=pts[(i-1+N)%N],p1=pts[i],p2=pts[(i+1)%N],p3=pts[(i+2)%N];
+    const c1=[p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6],c2=[p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6];
+    d+=` C${c1[0].toFixed(1)} ${c1[1].toFixed(1)},${c2[0].toFixed(1)} ${c2[1].toFixed(1)},${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d+'Z';
+}
+
+const gLand=el('g',{},svg), gRoutes=el('g',{},svg), gNodes=el('g',{},svg);
+const pos={}, nodeEls={};
+CATS.forEach((cat,k)=>{
+  const col=k%4,row=Math.floor(k/4);
+  const cx=200+col*387,cy=250+row*480;
+  el('path',{d:blob(cx,cy,185,232,k*37+11),fill:`var(--c-${cat.id})`,stroke:'var(--edge)','stroke-width':1.2},gLand);
+  const items=D.filter(d=>d.cat===cat.id);
+  const t=el('text',{x:cx,y:cy-186,'text-anchor':'middle',class:'region-title'},gLand);t.textContent=cat.name;
+  const cnt=el('text',{x:cx,y:cy-164,'text-anchor':'middle',class:'region-count'},gLand);cnt.textContent=items.length+' '+plural(items.length);
+  const rows=Math.ceil(items.length/2);
+  items.forEach((d,i)=>{
+    const c=i<rows?0:1, r=i<rows?i:i-rows;
+    const x=cx+(c===0?-150:12), y=cy-122+r*50;
+    pos[d.id]=[x,y];
+    const g=el('g',{class:'node',tabindex:0,role:'button','aria-label':d.n+', '+d.c},gNodes);
+    el('circle',{cx:x,cy:y,r:11,class:'ring',fill:'transparent'},g);
+    el('circle',{cx:x,cy:y,r:6,class:'dot'},g);
+    const tx=el('text',{x:x+13,y:y+5},g);tx.textContent=d.s;
+    const mk=el('text',{x:x+13,y:y+21,style:'font-size:12px;font-weight:400;fill:var(--ink2)'},g);mk.textContent=d.c;
+    g.addEventListener('click',()=>select(d.id));
+    g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select(d.id)}});
+    nodeEls[d.id]=g;
+  });
+});
+function plural(n){const a=n%10,b=n%100;if(a===1&&b!==11)return'сервис';if(a>=2&&a<=4&&(b<10||b>=20))return'сервиса';return'сервисов'}
+
+const panel=document.getElementById('panel');
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function select(id,scroll){
+  const d=byId[id];
+  Object.values(nodeEls).forEach(g=>g.classList.remove('sel','kin'));
+  gRoutes.innerHTML='';
+  nodeEls[id].classList.add('sel');
+  const kin=D.filter(x=>x.c===d.c&&x.id!==id);
+  const [x1,y1]=pos[id];
+  kin.forEach(k=>{
+    nodeEls[k.id].classList.add('kin');
+    const [x2,y2]=pos[k.id];
+    const mx=(x1+x2)/2,my=(y1+y2)/2-Math.min(160,Math.hypot(x2-x1,y2-y1)*.25);
+    el('path',{d:`M${x1} ${y1} Q${mx} ${my} ${x2} ${y2}`,class:'route'},gRoutes);
+  });
+  panel.innerHTML=`
+    <div class="maker"><span class="swatch" style="background:var(--c-${d.cat})"></span>${esc(d.c)}, ${esc(catById[d.cat].name.toLowerCase())}</div>
+    <h2>${esc(d.n)}</h2>
+    <p class="models">Модели: ${esc(d.m)}</p>
+    <h3>Что умеет</h3><p>${esc(d.can)}</p>
+    <h3>С чем работает</h3><div class="chips">${d.int.map(i=>`<span class="chip">${esc(i)}</span>`).join('')}</div>
+    <h3>Недостатки</h3><p class="con">${esc(d.con)}</p>
+    ${kin.length?`<h3>Ещё у ${esc(d.c)}</h3><div class="kin-list">${kin.map(k=>`<button data-id="${k.id}">${esc(k.n)}</button>`).join('')}</div>`:''}`;
+  panel.querySelectorAll('.kin-list button').forEach(b=>b.addEventListener('click',()=>select(b.dataset.id,true)));
+  if(scroll) panel.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});
+}
+
+// index
+let activeCat=null;
+const filters=document.getElementById('filters'), gaz=document.getElementById('gaz'), q=document.getElementById('q');
+function mkFilter(id,label){
+  const b=document.createElement('button');b.type='button';
+  b.innerHTML=(id?`<span class="swatch" style="background:var(--c-${id})"></span>`:'')+esc(label);
+  b.setAttribute('aria-pressed',String(activeCat===id));
+  b.onclick=()=>{activeCat=id;renderFilters();apply()};
+  filters.appendChild(b);
+}
+function renderFilters(){filters.innerHTML='';mkFilter(null,'Все категории');CATS.forEach(c=>mkFilter(c.id,c.name))}
+function match(d,s){if(!s)return true;const hay=[d.n,d.c,d.m,d.can,d.con,catById[d.cat].name,...d.int].join(' ').toLowerCase();return hay.includes(s)}
+function apply(){
+  const s=q.value.trim().toLowerCase();
+  D.forEach(d=>nodeEls[d.id].classList.toggle('dim',!(match(d,s)&&(!activeCat||d.cat===activeCat))));
+  gaz.innerHTML='';
+  CATS.forEach(c=>{
+    if(activeCat&&c.id!==activeCat)return;
+    const items=D.filter(d=>d.cat===c.id&&match(d,s));
+    if(!items.length)return;
+    const sec=document.createElement('section');
+    sec.innerHTML=`<h3><span class="swatch" style="background:var(--c-${c.id})"></span>${esc(c.name)}</h3><ul>${items.map(d=>`<li><button data-id="${d.id}"><span class="nm">${esc(d.n)}</span><span class="mk">${esc(d.c)}</span></button></li>`).join('')}</ul>`;
+    gaz.appendChild(sec);
+  });
+  if(!gaz.children.length) gaz.innerHTML='<p class="empty">Ничего не найдено. Попробуйте название компании или сервиса, например «Яндекс» или «Telegram».</p>';
+  gaz.querySelectorAll('button[data-id]').forEach(b=>b.addEventListener('click',()=>select(b.dataset.id,true)));
+}
+q.addEventListener('input',apply);
+renderFilters();apply();
+select('chatgpt');
+</script>
+</body>
+</html>
